@@ -1,32 +1,190 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
+import { Todo } from './todo.model';
+import { AppService } from './app.service';
 
 @Component({
   selector: 'app-root',
   template: `
-    <!--The content below is only a placeholder and can be replaced.-->
-    <div style="text-align:center" class="content">
-      <h1>
-        Welcome to {{title}}!
-      </h1>
-      <span style="display: block">{{ title }} app is running!</span>
-      <img width="300" alt="Angular Logo" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTAgMjUwIj4KICAgIDxwYXRoIGZpbGw9IiNERDAwMzEiIGQ9Ik0xMjUgMzBMMzEuOSA2My4ybDE0LjIgMTIzLjFMMTI1IDIzMGw3OC45LTQzLjcgMTQuMi0xMjMuMXoiIC8+CiAgICA8cGF0aCBmaWxsPSIjQzMwMDJGIiBkPSJNMTI1IDMwdjIyLjItLjFWMjMwbDc4LjktNDMuNyAxNC4yLTEyMy4xTDEyNSAzMHoiIC8+CiAgICA8cGF0aCAgZmlsbD0iI0ZGRkZGRiIgZD0iTTEyNSA1Mi4xTDY2LjggMTgyLjZoMjEuN2wxMS43LTI5LjJoNDkuNGwxMS43IDI5LjJIMTgzTDEyNSA1Mi4xem0xNyA4My4zaC0zNGwxNy00MC45IDE3IDQwLjl6IiAvPgogIDwvc3ZnPg==">
-    </div>
-    <h2>Here are some links to help you start: </h2>
-    <ul>
-      <li>
-        <h2><a target="_blank" rel="noopener" href="https://angular.io/tutorial">Tour of Heroes</a></h2>
-      </li>
-      <li>
-        <h2><a target="_blank" rel="noopener" href="https://angular.io/cli">CLI Documentation</a></h2>
-      </li>
-      <li>
-        <h2><a target="_blank" rel="noopener" href="https://blog.angular.io/">Angular blog</a></h2>
-      </li>
-    </ul>
-    
+    <mat-list>
+      <mat-progress-spinner [class.hidden]="!isRequesting" [mode]="'indeterminate'" [diameter]="40"></mat-progress-spinner>
+      <mat-error *ngIf="error">{{ error }}</mat-error>
+      <h3 mat-subheader>Zadania do wykonania</h3>
+      <h4 class="no-todos-placeholder">Brak zadań</h4>
+      <mat-list-item *ngFor="let todo of todos">
+        <div class="list-item-container">
+          <ng-container *ngIf="editedTodoId === todo.id">
+            <mat-form-field>
+              <input matInput [(ngModel)]="editedTodoName">
+            </mat-form-field>
+            <div class="item-actions">         
+              <button mat-stroked-button color="accent" class="item-action-btn" [disabled]="!canProcessTodo(editedTodoName)" (click)="updateTodo()">Zapisz</button>
+              <button mat-stroked-button class="item-action-btn" (click)="cancelTodoEdit()">Anuluj</button>
+            </div>
+          </ng-container>
+          <ng-container *ngIf="editedTodoId !== todo.id">
+            <h5 class="todo-name">{{ todo.name }}</h5>
+            <div class="item-actions">
+              <button mat-stroked-button color="primary" class="item-action-btn" (click)="editTodo(todo)">Edytuj</button>
+              <button mat-stroked-button color="warn" class="item-action-btn" (click)="deleteTodo(todo.id)">Usuń</button>
+            </div>
+          </ng-container>
+        </div>
+      </mat-list-item>
+      <h3 mat-subheader>Wprowadź nowe zadanie</h3>
+      <div class="add-todo-panel">
+        <mat-form-field class="add-todo-form-field">
+          <input matInput placeholder="Nazwa zadania" [(ngModel)]="todoName">
+        </mat-form-field>
+        <div>
+          <button mat-flat-button color="primary" [disabled]="!canProcessTodo(todoName)" (click)="addTodo()">
+            Dodaj zadanie
+          </button>
+        </div>
+      </div>
+    </mat-list>
   `,
-  styles: []
+  styles: [`
+    mat-list {
+      max-width: 1080px;
+      margin: 200px auto;
+    }
+
+    mat-list-item {
+      box-shadow: 0px 0px 4px 1px rgba(0,0,0,0.1);
+      margin: 6px 0;
+    }
+
+    .hidden {
+      visibility: hidden;
+    }
+
+    mat-progress-spinner {
+      margin: 0 auto;
+    }
+
+    .add-todo-panel {
+      display: flex;
+      padding: 0 16px;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    mat-form-field, .todo-name {
+      width: 80%;
+    }
+
+    .no-todos-placeholder {
+      margin: 0 16px;
+    }
+
+    .item-action-btn {
+      margin: 0 6px;
+    }
+
+    .item-actions {
+      margin-left: auto;
+    }
+
+    .list-item-container {
+       display: flex;
+       align-items: center;
+       width: 100%;
+    }
+  `]
 })
-export class AppComponent {
-  title = 'azure-project';
+export class AppComponent implements OnInit {
+  editedTodoId: number;
+  editedTodoName: string;
+  error: string;
+  isRequesting = false;
+  todoName = '';
+  todos: Todo[] = [
+    { id: 1, name: 'lol1' },
+    { id: 2, name: 'lol2' },
+    { id: 3, name: 'lol3' },
+  ];
+
+  constructor(private appService: AppService) {
+  }
+
+  ngOnInit() {
+    this.isRequesting = true;
+    this.appService.getTodos().subscribe(
+      (todos) => {
+        this.todos = todos;
+        this.isRequesting = false;
+      },
+      (err) => {
+        this.error = err.message;
+        this.isRequesting = false;
+      }
+    )
+  }
+
+  canProcessTodo(todoName: string): boolean {
+    return todoName && todoName.trim().length > 0 && todoName.trim().length <= 100 && !this.isRequesting;
+  }
+
+  addTodo() {
+    if (this.canProcessTodo(this.todoName)) {
+      const todoName = this.todoName.trim();
+      this.isRequesting = true;
+      this.appService.addTodo({ id: null, name: todoName }).subscribe(
+        (todo: Todo) => {
+          this.todos = [...this.todos, todo];
+          this.isRequesting = false;
+          this.todoName = '';
+        },
+        (err) => {
+          this.error = err.message;
+          this.isRequesting = false;
+        }
+      );
+    }
+  }
+
+  editTodo(todo: Todo) {
+    this.editedTodoId = todo.id;
+    this.editedTodoName = todo.name;
+  }
+
+  updateTodo() {
+    if (this.canProcessTodo(this.editedTodoName) && this.editedTodoId) {
+      const editedTodoName = this.editedTodoName.trim();
+      this.isRequesting = true;
+      this.appService.updateTodo({ id: this.editedTodoId, name: editedTodoName }).subscribe(
+        (todo: Todo) => {
+          const index = this.todos.map((todo) => todo.id).indexOf(todo.id);
+          this.todos[index] = todo;
+          this.todos = [...this.todos];
+          this.isRequesting = false;
+          this.editedTodoId = null;
+          this.editedTodoName = '';
+        },
+        (err) => {
+          this.error = err.message;
+          this.isRequesting = false;
+        }
+      )
+    }
+  }
+
+  cancelTodoEdit() {
+    this.editedTodoId = null;
+    this.editedTodoName = '';
+  }
+
+  deleteTodo(todoId: number) {
+    this.isRequesting = true;
+    this.appService.removeTodo(todoId).subscribe(
+      () => {
+        this.todos = this.todos.filter((todo) => todo.id !== todoId);
+        this.isRequesting = false;
+      },
+      (err) => {
+        this.error = err.message;
+        this.isRequesting = false;
+      }
+    )
+  }
 }
