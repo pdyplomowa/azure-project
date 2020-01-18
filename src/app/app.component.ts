@@ -12,7 +12,7 @@ import { AppService } from './app.service';
       <h4 class="no-todos-placeholder">Brak zadań</h4>
       <mat-list-item *ngFor="let todo of todos">
         <div class="list-item-container">
-          <ng-container *ngIf="editedTodoId === todo.id">
+          <ng-container *ngIf="editedTodoId === todo._id">
             <mat-form-field>
               <input matInput [(ngModel)]="editedTodoName">
             </mat-form-field>
@@ -21,11 +21,11 @@ import { AppService } from './app.service';
               <button mat-stroked-button class="item-action-btn" (click)="cancelTodoEdit()">Anuluj</button>
             </div>
           </ng-container>
-          <ng-container *ngIf="editedTodoId !== todo.id">
+          <ng-container *ngIf="editedTodoId !== todo._id">
             <h5 class="todo-name">{{ todo.name }}</h5>
             <div class="item-actions">
               <button mat-stroked-button color="primary" class="item-action-btn" (click)="editTodo(todo)">Edytuj</button>
-              <button mat-stroked-button color="warn" class="item-action-btn" (click)="deleteTodo(todo.id)">Usuń</button>
+              <button mat-stroked-button color="warn" class="item-action-btn" (click)="deleteTodo(todo._id)">Usuń</button>
             </div>
           </ng-container>
         </div>
@@ -93,16 +93,12 @@ import { AppService } from './app.service';
   `]
 })
 export class AppComponent implements OnInit {
-  editedTodoId: number;
+  editedTodoId: string;
   editedTodoName: string;
   error: string;
   isRequesting = false;
   todoName = '';
-  todos: Todo[] = [
-    { id: 1, name: 'lol1' },
-    { id: 2, name: 'lol2' },
-    { id: 3, name: 'lol3' },
-  ];
+  todos: Todo[] = [];
 
   constructor(private appService: AppService) {
   }
@@ -129,7 +125,7 @@ export class AppComponent implements OnInit {
     if (this.canProcessTodo(this.todoName)) {
       const todoName = this.todoName.trim();
       this.isRequesting = true;
-      this.appService.addTodo({ id: null, name: todoName }).subscribe(
+      this.appService.addTodo({ _id: undefined, name: todoName }).subscribe(
         (todo: Todo) => {
           this.todos = [...this.todos, todo];
           this.isRequesting = false;
@@ -144,7 +140,7 @@ export class AppComponent implements OnInit {
   }
 
   editTodo(todo: Todo) {
-    this.editedTodoId = todo.id;
+    this.editedTodoId = todo._id;
     this.editedTodoName = todo.name;
   }
 
@@ -152,9 +148,9 @@ export class AppComponent implements OnInit {
     if (this.canProcessTodo(this.editedTodoName) && this.editedTodoId) {
       const editedTodoName = this.editedTodoName.trim();
       this.isRequesting = true;
-      this.appService.updateTodo({ id: this.editedTodoId, name: editedTodoName }).subscribe(
+      this.appService.updateTodo({ _id: this.editedTodoId, name: editedTodoName }).subscribe(
         (todo: Todo) => {
-          const index = this.todos.map((todo) => todo.id).indexOf(todo.id);
+          const index = this.todos.map((todo) => todo._id).indexOf(todo._id);
           this.todos[index] = todo;
           this.todos = [...this.todos];
           this.isRequesting = false;
@@ -174,11 +170,11 @@ export class AppComponent implements OnInit {
     this.editedTodoName = '';
   }
 
-  deleteTodo(todoId: number) {
+  deleteTodo(todoId: string) {
     this.isRequesting = true;
     this.appService.removeTodo(todoId).subscribe(
       () => {
-        this.todos = this.todos.filter((todo) => todo.id !== todoId);
+        this.todos = this.todos.filter((todo) => todo._id !== todoId);
         this.isRequesting = false;
       },
       (err) => {

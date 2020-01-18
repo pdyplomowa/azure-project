@@ -15,7 +15,7 @@ export class AppService {
     return this.http.post<Todo>(`${this.apiUrl}/todo`, todo);
   }
 
-  removeTodo(todoId: number): Observable<void> {
+  removeTodo(todoId: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/todo/${todoId}`);
   }
 

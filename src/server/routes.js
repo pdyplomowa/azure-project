@@ -1,23 +1,21 @@
 const express = require('express');
 const router = express.Router();
-
-let sequence = 0;
+const todoService = require('./todo.service');
 
 router.get('/todos', (req, res) => {
-  res.status(200).json([]);
+  todoService.getTodos(req, res);
 });
 
 router.post('/todo', (req, res) => {
-  req.body.id = ++sequence;
-  res.status(200).json(req.body);
+  todoService.postTodo(req, res);
 })
 
 router.put('/todo', (req, res) => {
-  res.status(200).json(req.body);
+  todoService.putTodo(req, res);
 })
 
 router.delete('/todo/:id', (req, res) => {
-  res.status(200).json();
+  todoService.deleteTodo(req, res);
 })
 
 module.exports = router;
